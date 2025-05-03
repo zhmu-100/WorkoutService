@@ -7,6 +7,15 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * Data class representing a workout
+ *
+ * @property id Ид тренировки
+ * @property userId Ид пользователя
+ * @property name Название тренировки
+ * @property date Дата тренировки
+ * @property exercises Список упражнений
+ */
 @Serializable
 data class Workout(
     val id: String = "",

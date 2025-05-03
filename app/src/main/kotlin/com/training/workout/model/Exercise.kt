@@ -7,6 +7,24 @@ import kotlinx.datetime.toLocalDateTime
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/**
+ * Дата класс упражнения
+ *
+ * @property id Идентификатор упражнения
+ * @property name Название упражнения
+ * @property duration Дата и время выполнения упражнения
+ * @property exerciseType Тип упражнения
+ * @property sets Количество подходов
+ * @property reps Количество повторений
+ * @property distance Дистанция
+ * @property steps Количество шагов
+ * @property bmp Частота сердечных сокращений
+ * @property speed Скорость
+ * @property weight Вес
+ * @property calories Калории
+ * @property reaction Реакция
+ * @property note Примечание
+ */
 @Serializable
 data class Exercise(
     val id: String = "",

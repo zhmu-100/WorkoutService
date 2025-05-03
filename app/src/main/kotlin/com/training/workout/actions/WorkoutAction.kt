@@ -17,8 +17,18 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.example.dto.*
 
+/**
+ * Реализация интерфейс [IWorkoutAction]. Может работать с локальной БД или через Гейтвей
+ *
+ * @see IWorkoutAction
+ */
 class WorkoutAction : IWorkoutAction {
 
+  /**
+   * Конфигурация подключения к БД
+   *
+   * @see dotenv
+   */
   private val dotenv = dotenv { ignoreIfMissing = true }
   private val dbMode = dotenv["DB_MODE"] ?: "LOCAL"
   private val dbHost = dotenv["DB_HOST"] ?: "localhost"
@@ -32,6 +42,14 @@ class WorkoutAction : IWorkoutAction {
 
   private val httpClient = HttpClient { install(ContentNegotiation) { json() } }
 
+  /**
+   * Отправляет запрос на сервер с заданным методом и телом запроса в формате JSON
+   *
+   * @param url URL-адрес для отправки запроса
+   * @param payload Тело запроса в формате JSON
+   * @param method HTTP-метод (например, GET, POST, PUT, DELETE)
+   * @return Ответ от сервера
+   */
   private suspend inline fun <reified T : Any> HttpClient.sendJson(
       url: String,
       payload: T,
@@ -43,10 +61,19 @@ class WorkoutAction : IWorkoutAction {
         setBody(Json.encodeToString(payload))
       }
 
+  /** Проверяет, не является ли значение null, и если нет, добавляет его в карту */
   private fun MutableMap<String, String>.putIfNotNull(key: String, value: Any?) {
     value?.let { this[key] = it.toString() }
   }
 
+  /**
+   * Создает новую тренировку. Сначала создается запись в таблице workouts, затем в таблице
+   * exercises. Если создание записи в таблице workouts не удалось, то выбрасывается исключение.
+   *
+   * @param workout Тренировка для создания
+   * @return Созданная тренировка
+   * @see Workout Тренировка
+   */
   override suspend fun createWorkout(workout: Workout): Workout =
       withContext(Dispatchers.IO) {
         val workoutReq =
@@ -94,6 +121,13 @@ class WorkoutAction : IWorkoutAction {
         workout
       }
 
+  /**
+   * Получает тренировку по ее ID. Если тренировка не найдена, возвращает null.
+   *
+   * @param id ID тренировки
+   * @return Тренировка или null, если она не найдена
+   * @see Workout Тренировка
+   */
   override suspend fun getWorkout(id: String): Workout? =
       withContext(Dispatchers.IO) {
         val workoutRows =
@@ -117,6 +151,16 @@ class WorkoutAction : IWorkoutAction {
         return@withContext row.toModel(exerciseRows)
       }
 
+  /**
+   * Получает список всех тренировок для пользователя с учетом пейджинга. Если userId пустой, то
+   * возвращает все тренировки.
+   *
+   * @param userId ID пользователя
+   * @param page Номер страницы (начиная с 1)
+   * @param pageSize Количество записей на странице
+   * @return List тренировок
+   * @see Workout Тренировка
+   */
   override suspend fun listWorkouts(userId: String, page: Int, pageSize: Int): List<Workout> =
       withContext(Dispatchers.IO) {
         val filters = if (userId.isBlank()) null else mapOf("userid" to userId)
@@ -135,10 +179,16 @@ class WorkoutAction : IWorkoutAction {
         sliced.map { it.toModel(emptyList()) }
       }
 
+  /**
+   * Обновляет существующую тренировку. Сначала обновляется запись в таблице workouts, затем
+   * удаляются все упражнения и создаются новые.
+   *
+   * @param workout Обновленная тренировка
+   * @return Тренировка или null, если тренировка не была найдена/обновлена
+   * @see Workout Тренировка
+   */
   override suspend fun updateWorkout(workout: Workout): Workout? =
       withContext(Dispatchers.IO) {
-        val updateUrl = "$baseUrl/update"
-
         val updateReq =
             DbUpdateRequest(
                 table = "workouts",
@@ -181,6 +231,15 @@ class WorkoutAction : IWorkoutAction {
         workout
       }
 
+  /**
+   * Удаляет существующую тренировку на основе ее id и id пользователя. Если id пользователя не
+   * совпадает с id тренировки, то возвращает false.
+   *
+   * @param id ID тренировки
+   * @param userId ID пользователя
+   * @return true, если удалена, иначе false
+   * @see Workout Тренировка
+   */
   override suspend fun deleteWorkout(id: String, userId: String): Boolean =
       withContext(Dispatchers.IO) {
         val existing = getWorkout(id) ?: return@withContext false
@@ -199,6 +258,14 @@ class WorkoutAction : IWorkoutAction {
         resp.success == true
       }
 
+  /**
+   * Получает список упражнений в тренировке по ее ID. Если тренировка не найдена, возвращает пустой
+   * список.
+   *
+   * @param id ID тренировки
+   * @return Список упражнений
+   * @see Exercise Упражнение
+   */
   override suspend fun getWorkoutExercises(id: String): List<Exercise> =
       withContext(Dispatchers.IO) {
         httpClient
@@ -210,10 +277,27 @@ class WorkoutAction : IWorkoutAction {
             .map { it.toModel() }
       }
 
+  /**
+   * Создает кастомную тренировку. Сначала создается запись в таблице workouts, затем в таблице
+   * exercises. Если создание записи в таблице workouts не удалось, то выбрасывается исключение.
+   *
+   * @param workout Тренировка для создания
+   * @return Созданная кастомная тренировка
+   * @see Workout Тренировка
+   */
   override suspend fun createCustomWorkout(workout: Workout): Workout {
     return createWorkout(workout)
   }
 
+  /**
+   * Удаляет все упражнения в тренировке по ее ID. Если тренировка не найдена, возвращает пустой
+   * список.
+   *
+   * @param workoutId ID тренировки
+   * @return Список упражнений
+   * @see Exercise Упражнение
+   * @see Workout Тренировка
+   */
   private suspend fun deleteAllExercises(workoutId: String) {
     httpClient.sendJson(
         "$baseUrl/delete",
@@ -221,6 +305,7 @@ class WorkoutAction : IWorkoutAction {
         HttpMethod.Post)
   }
 
+  /** Преобразует строку из БД в объект Exercise */
   private fun DbExerciseRow.toModel(): Exercise =
       Exercise(
           id = id,
@@ -238,6 +323,7 @@ class WorkoutAction : IWorkoutAction {
           reaction = reaction?.let { ExerciseReaction.valueOf(it) },
           note = note)
 
+  /** Преобразует строку из БД в объект Workout */
   private fun DbWorkoutRow.toModel(exRows: List<DbExerciseRow>): Workout =
       Workout(
           id = id,

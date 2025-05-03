@@ -11,6 +11,11 @@ import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import kotlinx.serialization.json.Json
 
+/**
+ * Точка входа в приложение
+ *
+ * Запускает сервер на порту, указанном в переменной окружения PORT или 8002 по умолчанию
+ */
 fun main() {
   val dotenv = dotenv { ignoreIfMissing = true }
   val port = dotenv["PORT"]?.toIntOrNull() ?: 8002

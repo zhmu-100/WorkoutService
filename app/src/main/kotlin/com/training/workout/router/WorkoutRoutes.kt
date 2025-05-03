@@ -8,6 +8,18 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
+/**
+ * REST роутер для работы с тренировками
+ *
+ * Эндпоинты:
+ * - POST /training/workouts - Создать новую тренировку
+ * - GET /training/workouts/{id} - Получить тренировку по ID
+ * - GET /training/workouts - Получить список тренировок с постраничной навигацией
+ * - PUT /training/workouts/{id} - Обновить тренировку
+ * - DELETE /training/workouts/{id} - Удалить тренировку
+ * - GET /training/workouts/{id}/exercises - Получить список упражнений в тренировке
+ * - POST /training/workouts/custom - Создать кастомную тренировку
+ */
 fun Application.registerWorkoutRoutes(workoutService: IWorkoutService) {
   routing {
     route("/training/workouts") {

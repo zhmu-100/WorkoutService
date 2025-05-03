@@ -1,5 +1,6 @@
 package com.training.workout.model
 
+/** Енум класс, который описывает реакцию на упражнение */
 enum class ExerciseReaction {
   EXERCISE_REACTION_UNSPECIFIED,
   EXERCISE_REACTION_EXCELLENT,

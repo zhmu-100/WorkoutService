@@ -1,5 +1,6 @@
 package com.training.workout.model
 
+/** Енум класс, который описывает действия выполняемые в рамках упражнения */
 enum class ExerciseName {
   EXERCISE_NAME_UNSPECIFIED,
   EXERCISE_NAME_PUSHUPS,
