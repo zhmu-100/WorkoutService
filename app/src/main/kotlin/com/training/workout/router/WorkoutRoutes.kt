@@ -69,7 +69,7 @@ fun Application.registerWorkoutRoutes(workoutService: IWorkoutService) {
       post("/custom") {
         val workout = call.receive<Workout>()
         val created = workoutService.createCustomWorkout(workout)
-        call.respond(HttpStatusCode.Created, created)
+        call.respond(HttpStatusCode.Created, mapOf("id" to created.id))
       }
     }
   }

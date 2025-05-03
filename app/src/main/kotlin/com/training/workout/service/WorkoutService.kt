@@ -37,7 +37,7 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
   override suspend fun updateWorkout(workout: Workout): Workout? {
     val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
     val updated = workout.copy(date = now)
-    return action.updateWorkout(workout)
+    return action.updateWorkout(updated)
   }
 
   override suspend fun deleteWorkout(id: String, userId: String): Boolean =

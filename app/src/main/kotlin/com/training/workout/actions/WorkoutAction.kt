@@ -7,12 +7,8 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.client.utils.EmptyContent.contentType
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.parseIsoString
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
@@ -222,7 +218,7 @@ class WorkoutAction : IWorkoutAction {
       Exercise(
           id = id,
           name = ExerciseName.valueOf(name),
-          duration = Duration.parseIsoString(duration),
+          duration = LocalDateTime.parse(duration),
           exerciseType = ExerciseType.valueOf(exercise_type),
           sets = sets?.toIntOrNull(),
           reps = reps?.toIntOrNull(),

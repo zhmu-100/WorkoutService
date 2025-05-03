@@ -1,14 +1,18 @@
 package com.training.workout.model
 
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
+import kotlinx.datetime.Clock
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
 data class Exercise(
     val id: String = "",
     val name: ExerciseName = ExerciseName.EXERCISE_NAME_UNSPECIFIED,
-    val duration: Duration = 0.seconds,
+    val duration: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
+    @SerialName("exercise_type")
     val exerciseType: ExerciseType = ExerciseType.EXERCISE_TYPE_UNSPECIFIED,
     val sets: Int? = null,
     val reps: Int? = null,
