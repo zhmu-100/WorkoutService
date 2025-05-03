@@ -19,9 +19,9 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class DbReadRequest(
-  val table: String,
-  val columns: List<String> = listOf("*"),
-  val filters: Map<String, String>? = null
+    val table: String,
+    val columns: List<String> = listOf("*"),
+    val filters: Map<String, String>? = null
 )
 
 /**
@@ -34,10 +34,10 @@ data class DbReadRequest(
  */
 @Serializable
 data class DbUpdateRequest(
-  val table: String,
-  val data: Map<String, String>,
-  val condition: String,
-  val conditionParams: List<String>
+    val table: String,
+    val data: Map<String, String>,
+    val condition: String,
+    val conditionParams: List<String>
 )
 
 /**
@@ -49,9 +49,9 @@ data class DbUpdateRequest(
  */
 @Serializable
 data class DbDeleteRequest(
-  val table: String,
-  val condition: String,
-  val conditionParams: List<String>
+    val table: String,
+    val condition: String,
+    val conditionParams: List<String>
 )
 
 /**
