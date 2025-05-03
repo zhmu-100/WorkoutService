@@ -9,13 +9,14 @@ import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
+import kotlinx.serialization.json.Json
 
 fun main() {
   val dotenv = dotenv { ignoreIfMissing = true }
   val port = dotenv["PORT"]?.toIntOrNull() ?: 8002
 
   embeddedServer(Netty, port = port) {
-        install(ContentNegotiation) { json() }
+        install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
 
         val workoutAction = WorkoutAction()
         val workoutService = WorkoutService(workoutAction)

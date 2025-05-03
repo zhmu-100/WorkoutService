@@ -27,7 +27,7 @@ fun Application.registerWorkoutRoutes(workoutService: IWorkoutService) {
       }
 
       get {
-        val userId = call.request.queryParameters["userId"] ?: ""
+        val userId = call.request.queryParameters["user_id"] ?: ""
         val page = call.request.queryParameters["page"]?.toIntOrNull() ?: 1
         val pageSize = call.request.queryParameters["pageSize"]?.toIntOrNull() ?: 10
 

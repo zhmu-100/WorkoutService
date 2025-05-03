@@ -12,7 +12,7 @@ CREATE TABLE exercises (
     id VARCHAR(255) PRIMARY KEY,
     workoutid VARCHAR(255) REFERENCES workouts(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    duration TIMESTAMP NOT NULL,
+    duration varchar(255) NOT NULL,
     exercise_type VARCHAR(255) NOT NULL,
     sets INTEGER,
     reps INTEGER,

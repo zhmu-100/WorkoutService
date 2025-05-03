@@ -12,7 +12,7 @@ data class Exercise(
     val id: String = "",
     val name: ExerciseName = ExerciseName.EXERCISE_NAME_UNSPECIFIED,
     val duration: LocalDateTime = Clock.System.now().toLocalDateTime(TimeZone.UTC),
-    @SerialName("exercise_type")
+    @SerialName("excercise_type")
     val exerciseType: ExerciseType = ExerciseType.EXERCISE_TYPE_UNSPECIFIED,
     val sets: Int? = null,
     val reps: Int? = null,

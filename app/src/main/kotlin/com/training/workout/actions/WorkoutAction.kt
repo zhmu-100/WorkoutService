@@ -7,11 +7,14 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDateTime
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import org.example.dto.*
 
 class WorkoutAction : IWorkoutAction {
@@ -29,13 +32,16 @@ class WorkoutAction : IWorkoutAction {
 
   private val httpClient = HttpClient { install(ContentNegotiation) { json() } }
 
-  private suspend inline fun <reified T> postJson(url: String, body: Any): T =
-      httpClient
-          .post(url) {
-            contentType(ContentType.Application.Json)
-            setBody(body)
-          }
-          .body()
+  private suspend inline fun <reified T : Any> HttpClient.sendJson(
+      url: String,
+      payload: T,
+      method: HttpMethod
+  ): HttpResponse =
+      request(url) {
+        this.method = method
+        contentType(ContentType.Application.Json)
+        setBody(Json.encodeToString(payload))
+      }
 
   private fun MutableMap<String, String>.putIfNotNull(key: String, value: Any?) {
     value?.let { this[key] = it.toString() }
@@ -52,12 +58,13 @@ class WorkoutAction : IWorkoutAction {
                         "userid" to workout.userId,
                         "name" to workout.name,
                         "date" to workout.date.toString()))
-        val createUrl = "$baseUrl/create"
-        val resp: DbResponse = postJson(createUrl, workoutReq)
-        if (resp.success != true) throw Exception("Failed to create workout: ${resp.error}")
+        val workoutResp = httpClient.sendJson("$baseUrl/create", workoutReq, HttpMethod.Post)
+        val dbResp: DbResponse = workoutResp.body()
+
+        if (dbResp.success != true) throw Exception("Failed to create workout: ${dbResp.error}")
 
         workout.exercises.forEach { ex ->
-          val data =
+          val data: MutableMap<String, String> =
               mutableMapOf(
                   "id" to ex.id,
                   "workoutid" to workout.id,
@@ -77,7 +84,9 @@ class WorkoutAction : IWorkoutAction {
           data.putIfNotNull("note", ex.note)
 
           val exReq = DbCreateRequest(table = "exercises", data = data)
-          val exResp: DbResponse = postJson(createUrl, exReq)
+          val exResp =
+              httpClient.sendJson("$baseUrl/create", exReq, HttpMethod.Post).body<DbResponse>()
+
           if (exResp.success != true)
               throw Exception("Failed to create exercise '${ex.name}': ${exResp.error}")
         }
@@ -87,31 +96,35 @@ class WorkoutAction : IWorkoutAction {
 
   override suspend fun getWorkout(id: String): Workout? =
       withContext(Dispatchers.IO) {
-        val readUrl = "$baseUrl/read"
-
-        val workoutRows: List<DbWorkoutRow> =
-            postJson(
-                readUrl,
-                DbReadRequest(
-                    table = "workouts", columns = listOf("*"), filters = mapOf("id" to id)))
+        val workoutRows =
+            httpClient
+                .sendJson(
+                    "$baseUrl/read",
+                    DbReadRequest("workouts", filters = mapOf("id" to id)),
+                    HttpMethod.Post)
+                .body<List<DbWorkoutRow>>()
 
         val row = workoutRows.firstOrNull() ?: return@withContext null
 
-        val exerciseRows: List<DbExerciseRow> =
-            postJson(
-                readUrl,
-                DbReadRequest(
-                    table = "exercises", columns = listOf("*"), filters = mapOf("workoutid" to id)))
+        val exerciseRows =
+            httpClient
+                .sendJson(
+                    "$baseUrl/read",
+                    DbReadRequest("exercises", filters = mapOf("workoutid" to id)),
+                    HttpMethod.Post)
+                .body<List<DbExerciseRow>>()
+
         return@withContext row.toModel(exerciseRows)
       }
 
   override suspend fun listWorkouts(userId: String, page: Int, pageSize: Int): List<Workout> =
       withContext(Dispatchers.IO) {
         val filters = if (userId.isBlank()) null else mapOf("userid" to userId)
-        val readUrl = "$baseUrl/read"
-
-        val rows: List<DbWorkoutRow> =
-            postJson(readUrl, DbReadRequest(table = "workouts", filters = filters))
+        val rows =
+            httpClient
+                .sendJson(
+                    "$baseUrl/read", DbReadRequest("workouts", filters = filters), HttpMethod.Post)
+                .body<List<DbWorkoutRow>>()
 
         val sliced =
             rows
@@ -136,13 +149,8 @@ class WorkoutAction : IWorkoutAction {
                         "date" to workout.date.toString()),
                 condition = "id = ?",
                 conditionParams = listOf(workout.id))
-        val resp: DbResponse =
-            httpClient
-                .put(updateUrl) {
-                  contentType(ContentType.Application.Json)
-                  setBody(updateReq)
-                }
-                .body()
+        val resp =
+            httpClient.sendJson("$baseUrl/update", updateReq, HttpMethod.Put).body<DbResponse>()
 
         if (resp.success != true) return@withContext null
 
@@ -166,8 +174,8 @@ class WorkoutAction : IWorkoutAction {
           exerciseMap.putIfNotNull("calories", ex.calories)
           exerciseMap.putIfNotNull("reaction", ex.reaction?.name)
           exerciseMap.putIfNotNull("note", ex.note)
-
-          postJson("$baseUrl/create", DbCreateRequest("exercises", exerciseMap))
+          httpClient.sendJson(
+              "$baseUrl/create", DbCreateRequest("exercises", exerciseMap), HttpMethod.Post)
         }
 
         workout
@@ -180,27 +188,26 @@ class WorkoutAction : IWorkoutAction {
 
         deleteAllExercises(id)
 
-        val delReq =
-            DbDeleteRequest(table = "workouts", condition = "id = ?", conditionParams = listOf(id))
-        val resp: DbResponse =
+        val resp =
             httpClient
-                .delete("$baseUrl/delete") {
-                  contentType(ContentType.Application.Json)
-                  setBody(delReq)
-                }
-                .body()
+                .sendJson(
+                    "$baseUrl/delete",
+                    DbDeleteRequest("workouts", "id = ?", listOf(id)),
+                    HttpMethod.Delete)
+                .body<DbResponse>()
 
         resp.success == true
       }
 
   override suspend fun getWorkoutExercises(id: String): List<Exercise> =
       withContext(Dispatchers.IO) {
-        val rows: List<DbExerciseRow> =
-            postJson(
+        httpClient
+            .sendJson(
                 "$baseUrl/read",
-                DbReadRequest(
-                    table = "exercises", columns = listOf("*"), filters = mapOf("workoutid" to id)))
-        rows.map { it.toModel() }
+                DbReadRequest("exercises", filters = mapOf("workoutid" to id)),
+                HttpMethod.Post)
+            .body<List<DbExerciseRow>>()
+            .map { it.toModel() }
       }
 
   override suspend fun createCustomWorkout(workout: Workout): Workout {
@@ -208,10 +215,10 @@ class WorkoutAction : IWorkoutAction {
   }
 
   private suspend fun deleteAllExercises(workoutId: String) {
-    val del =
-        DbDeleteRequest(
-            table = "exercises", condition = "workoutid = ?", conditionParams = listOf(workoutId))
-    postJson<DbResponse>("$baseUrl/delete", del)
+    httpClient.sendJson(
+        "$baseUrl/delete",
+        DbDeleteRequest("exercises", "workoutid = ?", listOf(workoutId)),
+        HttpMethod.Post)
   }
 
   private fun DbExerciseRow.toModel(): Exercise =
