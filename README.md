@@ -10,6 +10,10 @@ PORT=8001
 DB_MODE=LOCAL        # LOCAL or gateway
 DB_HOST=localhost
 DB_PORT=8081
+
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=
 ```
 
 Default port for this service is 8002\. [App.kt](app/src/main/kotlin/com/training/workout/App.kt)/
