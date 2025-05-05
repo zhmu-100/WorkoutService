@@ -14,11 +14,11 @@ import kotlinx.datetime.toLocalDateTime
 /** Реаализует интерфейс [IWorkoutService] для бизнес логики работы с тренировками */
 class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
   private val dotenv = dotenv { ignoreIfMissing = true }
-  private val loggerClient = LoggerClient(
-    host = dotenv["REDIS_HOST"] ?: "localhost",
-    port = dotenv["REDIS_PORT"]?.toIntOrNull() ?: 6379,
-    password = dotenv["REDIS_PASSWORD"] ?: ""
-  )
+  private val loggerClient =
+      LoggerClient(
+          host = dotenv["REDIS_HOST"] ?: "localhost",
+          port = dotenv["REDIS_PORT"]?.toIntOrNull() ?: 6379,
+          password = dotenv["REDIS_PASSWORD"] ?: "")
 
   /**
    * Создает новую тренировку. Генерирует UUID и дату создания.
@@ -28,11 +28,10 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
    */
   override suspend fun createWorkout(workout: Workout): Workout {
     loggerClient.logActivity(
-      event = "Сервис: Подготовка к созданию тренировки",
-      userId = workout.userId,
-      additionalData = mapOf("workoutName" to workout.name)
-    )
-    
+        event = "Сервис: Подготовка к созданию тренировки",
+        userId = workout.userId,
+        additionalData = mapOf("workoutName" to workout.name))
+
     try {
       val workoutId = UUID.randomUUID().toString()
 
@@ -50,41 +49,33 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
           )
 
       loggerClient.logActivity(
-        event = "Сервис: Тренировка подготовлена к созданию",
-        userId = workout.userId,
-        additionalData = mapOf(
-          "workoutId" to workoutId,
-          "exercisesCount" to preparedExercises.size.toString()
-        )
-      )
-      
+          event = "Сервис: Тренировка подготовлена к созданию",
+          userId = workout.userId,
+          additionalData =
+              mapOf(
+                  "workoutId" to workoutId, "exercisesCount" to preparedExercises.size.toString()))
+
       val result = action.createWorkout(newWorkout)
-      
+
       loggerClient.logActivity(
-        event = "Сервис: Тренировка успешно создана",
-        userId = workout.userId,
-        additionalData = mapOf(
-          "workoutId" to workoutId,
-          "workoutName" to workout.name
-        )
-      )
-      
+          event = "Сервис: Тренировка успешно создана",
+          userId = workout.userId,
+          additionalData = mapOf("workoutId" to workoutId, "workoutName" to workout.name))
+
       return result
     } catch (e: Exception) {
       // Логируем информацию об ошибке
       loggerClient.logActivity(
-        event = "Сервис: Ошибка при создании тренировки",
-        userId = workout.userId,
-        level = LogLevel.ERROR,
-        additionalData = mapOf("error" to (e.message ?: "Unknown error"))
-      )
-      
+          event = "Сервис: Ошибка при создании тренировки",
+          userId = workout.userId,
+          level = LogLevel.ERROR,
+          additionalData = mapOf("error" to (e.message ?: "Unknown error")))
+
       loggerClient.logError(
-        event = "Сервис: Ошибка при создании тренировки",
-        errorMessage = e.message ?: "Unknown error",
-        userId = workout.userId,
-        stackTrace = e.stackTraceToString()
-      )
+          event = "Сервис: Ошибка при создании тренировки",
+          errorMessage = e.message ?: "Unknown error",
+          userId = workout.userId,
+          stackTrace = e.stackTraceToString())
       throw e
     }
   }
@@ -97,44 +88,35 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
    */
   override suspend fun getWorkout(id: String): Workout? {
     loggerClient.logActivity(
-      event = "Сервис: Запрос тренировки по ID",
-      additionalData = mapOf("workoutId" to id)
-    )
-    
+        event = "Сервис: Запрос тренировки по ID", additionalData = mapOf("workoutId" to id))
+
     try {
       val workout = action.getWorkout(id)
-      
+
       if (workout == null) {
         loggerClient.logActivity(
-          event = "Сервис: Тренировка не найдена",
-          level = LogLevel.WARN,
-          additionalData = mapOf("workoutId" to id)
-        )
+            event = "Сервис: Тренировка не найдена",
+            level = LogLevel.WARN,
+            additionalData = mapOf("workoutId" to id))
       } else {
         loggerClient.logActivity(
-          event = "Сервис: Тренировка успешно получена",
-          userId = workout.userId,
-          additionalData = mapOf(
-            "workoutId" to id,
-            "workoutName" to workout.name
-          )
-        )
+            event = "Сервис: Тренировка успешно получена",
+            userId = workout.userId,
+            additionalData = mapOf("workoutId" to id, "workoutName" to workout.name))
       }
-      
+
       return workout
     } catch (e: Exception) {
       // Логируем информацию об ошибке
       loggerClient.logActivity(
-        event = "Сервис: Ошибка при получении тренировки",
-        level = LogLevel.ERROR,
-        additionalData = mapOf("workoutId" to id, "error" to (e.message ?: "Unknown error"))
-      )
-      
+          event = "Сервис: Ошибка при получении тренировки",
+          level = LogLevel.ERROR,
+          additionalData = mapOf("workoutId" to id, "error" to (e.message ?: "Unknown error")))
+
       loggerClient.logError(
-        event = "Сервис: Ошибка при получении тренировки",
-        errorMessage = e.message ?: "Unknown error",
-        stackTrace = e.stackTraceToString()
-      )
+          event = "Сервис: Ошибка при получении тренировки",
+          errorMessage = e.message ?: "Unknown error",
+          stackTrace = e.stackTraceToString())
       throw e
     }
   }
@@ -149,39 +131,32 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
    */
   override suspend fun listWorkouts(userId: String, page: Int, pageSize: Int): List<Workout> {
     loggerClient.logActivity(
-      event = "Сервис: Запрос списка тренировок",
-      userId = if (userId.isNotBlank()) userId else null,
-      additionalData = mapOf(
-        "page" to page.toString(),
-        "pageSize" to pageSize.toString()
-      )
-    )
-    
+        event = "Сервис: Запрос списка тренировок",
+        userId = if (userId.isNotBlank()) userId else null,
+        additionalData = mapOf("page" to page.toString(), "pageSize" to pageSize.toString()))
+
     try {
       val workouts = action.listWorkouts(userId, page, pageSize)
-      
+
       loggerClient.logActivity(
-        event = "Сервис: Список тренировок успешно получен",
-        userId = if (userId.isNotBlank()) userId else null,
-        additionalData = mapOf("count" to workouts.size.toString())
-      )
-      
+          event = "Сервис: Список тренировок успешно получен",
+          userId = if (userId.isNotBlank()) userId else null,
+          additionalData = mapOf("count" to workouts.size.toString()))
+
       return workouts
     } catch (e: Exception) {
       // Логируем информацию об ошибке
       loggerClient.logActivity(
-        event = "Сервис: Ошибка при получении списка тренировок",
-        userId = if (userId.isNotBlank()) userId else null,
-        level = LogLevel.ERROR,
-        additionalData = mapOf("error" to (e.message ?: "Unknown error"))
-      )
-      
+          event = "Сервис: Ошибка при получении списка тренировок",
+          userId = if (userId.isNotBlank()) userId else null,
+          level = LogLevel.ERROR,
+          additionalData = mapOf("error" to (e.message ?: "Unknown error")))
+
       loggerClient.logError(
-        event = "Сервис: Ошибка при получении списка тренировок",
-        errorMessage = e.message ?: "Unknown error",
-        userId = if (userId.isNotBlank()) userId else null,
-        stackTrace = e.stackTraceToString()
-      )
+          event = "Сервис: Ошибка при получении списка тренировок",
+          errorMessage = e.message ?: "Unknown error",
+          userId = if (userId.isNotBlank()) userId else null,
+          stackTrace = e.stackTraceToString())
       throw e
     }
   }
@@ -194,57 +169,44 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
    */
   override suspend fun updateWorkout(workout: Workout): Workout? {
     loggerClient.logActivity(
-      event = "Сервис: Подготовка к обновлению тренировки",
-      userId = workout.userId,
-      additionalData = mapOf(
-        "workoutId" to workout.id,
-        "workoutName" to workout.name
-      )
-    )
-    
+        event = "Сервис: Подготовка к обновлению тренировки",
+        userId = workout.userId,
+        additionalData = mapOf("workoutId" to workout.id, "workoutName" to workout.name))
+
     try {
       val now = Clock.System.now().toLocalDateTime(TimeZone.UTC)
       val updated = workout.copy(date = now)
-      
+
       val result = action.updateWorkout(updated)
-      
+
       if (result == null) {
         loggerClient.logActivity(
-          event = "Сервис: Тренировка не найдена при обновлении",
-          userId = workout.userId,
-          level = LogLevel.WARN,
-          additionalData = mapOf("workoutId" to workout.id)
-        )
+            event = "Сервис: Тренировка не найдена при обновлении",
+            userId = workout.userId,
+            level = LogLevel.WARN,
+            additionalData = mapOf("workoutId" to workout.id))
       } else {
         loggerClient.logActivity(
-          event = "Сервис: Тренировка успешно обновлена",
-          userId = workout.userId,
-          additionalData = mapOf(
-            "workoutId" to workout.id,
-            "workoutName" to workout.name
-          )
-        )
+            event = "Сервис: Тренировка успешно обновлена",
+            userId = workout.userId,
+            additionalData = mapOf("workoutId" to workout.id, "workoutName" to workout.name))
       }
-      
+
       return result
     } catch (e: Exception) {
       // Логируем информацию об ошибке
       loggerClient.logActivity(
-        event = "Сервис: Ошибка при обновлении тренировки",
-        userId = workout.userId,
-        level = LogLevel.ERROR,
-        additionalData = mapOf(
-          "workoutId" to workout.id,
-          "error" to (e.message ?: "Unknown error")
-        )
-      )
-      
+          event = "Сервис: Ошибка при обновлении тренировки",
+          userId = workout.userId,
+          level = LogLevel.ERROR,
+          additionalData =
+              mapOf("workoutId" to workout.id, "error" to (e.message ?: "Unknown error")))
+
       loggerClient.logError(
-        event = "Сервис: Ошибка при обновлении тренировки",
-        errorMessage = e.message ?: "Unknown error",
-        userId = workout.userId,
-        stackTrace = e.stackTraceToString()
-      )
+          event = "Сервис: Ошибка при обновлении тренировки",
+          errorMessage = e.message ?: "Unknown error",
+          userId = workout.userId,
+          stackTrace = e.stackTraceToString())
       throw e
     }
   }
@@ -258,48 +220,40 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
    */
   override suspend fun deleteWorkout(id: String, userId: String): Boolean {
     loggerClient.logActivity(
-      event = "Сервис: Запрос на удаление тренировки",
-      userId = userId,
-      additionalData = mapOf("workoutId" to id)
-    )
-    
+        event = "Сервис: Запрос на удаление тренировки",
+        userId = userId,
+        additionalData = mapOf("workoutId" to id))
+
     try {
       val success = action.deleteWorkout(id, userId)
-      
+
       if (success) {
         loggerClient.logActivity(
-          event = "Сервис: Тренировка успешно удалена",
-          userId = userId,
-          additionalData = mapOf("workoutId" to id)
-        )
+            event = "Сервис: Тренировка успешно удалена",
+            userId = userId,
+            additionalData = mapOf("workoutId" to id))
       } else {
         loggerClient.logActivity(
-          event = "Сервис: Тренировка не найдена или не удалена",
-          userId = userId,
-          level = LogLevel.WARN,
-          additionalData = mapOf("workoutId" to id)
-        )
+            event = "Сервис: Тренировка не найдена или не удалена",
+            userId = userId,
+            level = LogLevel.WARN,
+            additionalData = mapOf("workoutId" to id))
       }
-      
+
       return success
     } catch (e: Exception) {
       // Логируем информацию об ошибке
       loggerClient.logActivity(
-        event = "Сервис: Ошибка при удалении тренировки",
-        userId = userId,
-        level = LogLevel.ERROR,
-        additionalData = mapOf(
-          "workoutId" to id,
-          "error" to (e.message ?: "Unknown error")
-        )
-      )
-      
+          event = "Сервис: Ошибка при удалении тренировки",
+          userId = userId,
+          level = LogLevel.ERROR,
+          additionalData = mapOf("workoutId" to id, "error" to (e.message ?: "Unknown error")))
+
       loggerClient.logError(
-        event = "Сервис: Ошибка при удалении тренировки",
-        errorMessage = e.message ?: "Unknown error",
-        userId = userId,
-        stackTrace = e.stackTraceToString()
-      )
+          event = "Сервис: Ошибка при удалении тренировки",
+          errorMessage = e.message ?: "Unknown error",
+          userId = userId,
+          stackTrace = e.stackTraceToString())
       throw e
     }
   }
@@ -312,38 +266,27 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
    */
   override suspend fun getWorkoutExercises(id: String): List<Exercise> {
     loggerClient.logActivity(
-      event = "Сервис: Запрос упражнений тренировки",
-      additionalData = mapOf("workoutId" to id)
-    )
-    
+        event = "Сервис: Запрос упражнений тренировки", additionalData = mapOf("workoutId" to id))
+
     try {
       val exercises = action.getWorkoutExercises(id)
-      
+
       loggerClient.logActivity(
-        event = "Сервис: Упражнения тренировки успешно получены",
-        additionalData = mapOf(
-          "workoutId" to id,
-          "exercisesCount" to exercises.size.toString()
-        )
-      )
-      
+          event = "Сервис: Упражнения тренировки успешно получены",
+          additionalData = mapOf("workoutId" to id, "exercisesCount" to exercises.size.toString()))
+
       return exercises
     } catch (e: Exception) {
       // Логируем информацию об ошибке
       loggerClient.logActivity(
-        event = "Сервис: Ошибка при получении упражнений тренировки",
-        level = LogLevel.ERROR,
-        additionalData = mapOf(
-          "workoutId" to id,
-          "error" to (e.message ?: "Unknown error")
-        )
-      )
-      
+          event = "Сервис: Ошибка при получении упражнений тренировки",
+          level = LogLevel.ERROR,
+          additionalData = mapOf("workoutId" to id, "error" to (e.message ?: "Unknown error")))
+
       loggerClient.logError(
-        event = "Сервис: Ошибка при получении упражнений тренировки",
-        errorMessage = e.message ?: "Unknown error",
-        stackTrace = e.stackTraceToString()
-      )
+          event = "Сервис: Ошибка при получении упражнений тренировки",
+          errorMessage = e.message ?: "Unknown error",
+          stackTrace = e.stackTraceToString())
       throw e
     }
   }
@@ -356,39 +299,32 @@ class WorkoutService(private val action: IWorkoutAction) : IWorkoutService {
    */
   override suspend fun createCustomWorkout(workout: Workout): Workout {
     loggerClient.logActivity(
-      event = "Сервис: Запрос на создание кастомной тренировки",
-      userId = workout.userId,
-      additionalData = mapOf("workoutName" to workout.name)
-    )
-    
+        event = "Сервис: Запрос на создание кастомной тренировки",
+        userId = workout.userId,
+        additionalData = mapOf("workoutName" to workout.name))
+
     try {
       val result = action.createWorkout(workout)
-      
+
       loggerClient.logActivity(
-        event = "Сервис: Кастомная тренировка успешно создана",
-        userId = workout.userId,
-        additionalData = mapOf(
-          "workoutId" to result.id,
-          "workoutName" to result.name
-        )
-      )
-      
+          event = "Сервис: Кастомная тренировка успешно создана",
+          userId = workout.userId,
+          additionalData = mapOf("workoutId" to result.id, "workoutName" to result.name))
+
       return result
     } catch (e: Exception) {
       // Логируем информацию об ошибке
       loggerClient.logActivity(
-        event = "Сервис: Ошибка при создании кастомной тренировки",
-        userId = workout.userId,
-        level = LogLevel.ERROR,
-        additionalData = mapOf("error" to (e.message ?: "Unknown error"))
-      )
-      
+          event = "Сервис: Ошибка при создании кастомной тренировки",
+          userId = workout.userId,
+          level = LogLevel.ERROR,
+          additionalData = mapOf("error" to (e.message ?: "Unknown error")))
+
       loggerClient.logError(
-        event = "Сервис: Ошибка при создании кастомной тренировки",
-        errorMessage = e.message ?: "Unknown error",
-        userId = workout.userId,
-        stackTrace = e.stackTraceToString()
-      )
+          event = "Сервис: Ошибка при создании кастомной тренировки",
+          errorMessage = e.message ?: "Unknown error",
+          userId = workout.userId,
+          stackTrace = e.stackTraceToString())
       throw e
     }
   }
