@@ -91,7 +91,7 @@ jobs:
           build-args: |
             SERVICE_NAME=${{ inputs.service-name }}
             SERVICE_VERSION=${{ inputs.version }}
-            JAR_FILE=./artifacts/NotesService.jar
+            JAR_FILE=./artifacts/WorkoutService.jar
 
       - name: Prepare deployment files
         run: |
